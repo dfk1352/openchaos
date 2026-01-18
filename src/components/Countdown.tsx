@@ -2,20 +2,16 @@
 
 import { useState, useEffect } from "react";
 
-function getNextSunday8PM(): Date {
+function getNextMergeTime(): Date {
   const now = new Date();
   const target = new Date(now);
 
-  // Set to next Sunday
-  const daysUntilSunday = (7 - now.getUTCDay()) % 7;
-  target.setUTCDate(now.getUTCDate() + (daysUntilSunday === 0 ? 7 : daysUntilSunday));
-
-  // Set to 09:00 UTC
+  // Set to 9:00:00 UTC today
   target.setUTCHours(9, 0, 0, 0);
 
-  // If it's Sunday but before 09:00 UTC, use today
-  if (now.getUTCDay() === 0 && now.getUTCHours() < 9) {
-    target.setUTCDate(now.getUTCDate());
+  // If we've already passed 9:00 UTC today, use 9:00 UTC tomorrow
+  if (now.getTime() >= target.getTime()) {
+    target.setUTCDate(target.getUTCDate() + 1);
   }
 
   return target;
@@ -43,14 +39,22 @@ function pad(n: number): string {
 }
 
 export function Countdown() {
-  const [target] = useState(() => getNextSunday8PM());
+  const [target, setTarget] = useState(() => getNextMergeTime());
   const [time, setTime] = useState(() => getTimeRemaining(target));
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const interval = setInterval(() => {
-      setTime(getTimeRemaining(target));
+      const now = new Date();
+      // If we've passed the target time, recalculate for the next day
+      if (now.getTime() >= target.getTime()) {
+        const newTarget = getNextMergeTime();
+        setTarget(newTarget);
+        setTime(getTimeRemaining(newTarget));
+      } else {
+        setTime(getTimeRemaining(target));
+      }
     }, 1000);
 
     return () => clearInterval(interval);
